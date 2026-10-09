@@ -1,3 +1,4 @@
+import os
 import pygame
 import random
 
@@ -19,6 +20,14 @@ DIFFICULTIES = {
     "Hard": (2.5, 0.02)
 }
 
+
+class DummySound:
+    """Fallback object if audio files or mixer are unavailable."""
+
+    def play(self):
+        pass
+
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
@@ -28,11 +37,42 @@ class GameEngine:
         self.large_font = pygame.font.SysFont("Arial", 50)
         self.small_font = pygame.font.SysFont("Arial", 20)
 
+        self._init_sounds()
+
         self.current_difficulty = "Medium"
-        self.state = "MENU"  # States: MENU, PLAYING, GAME_OVER"
+        self.state = "MENU"
         self.game_over = False
 
         self.reset_game(self.current_difficulty)
+
+    def _init_sounds(self):
+        """Safely initialize Pygame mixer and load sound assets with fallback."""
+        self.sounds = {
+            "shoot": DummySound(),
+            "destroy": DummySound(),
+            "game_over": DummySound()
+        }
+
+        try:
+            if not pygame.mixer.get_init():
+                pygame.mixer.init()
+
+            sounds_dir = os.path.join("assets", "sounds")
+
+            shoot_path = os.path.join(sounds_dir, "laser.wav")
+            destroy_path = os.path.join(sounds_dir, "explosion.wav")
+            game_over_path = os.path.join(sounds_dir, "game_over.wav")
+
+            if os.path.exists(shoot_path):
+                self.sounds["shoot"] = pygame.mixer.Sound(shoot_path)
+            if os.path.exists(destroy_path):
+                self.sounds["destroy"] = pygame.mixer.Sound(destroy_path)
+            if os.path.exists(game_over_path):
+                self.sounds["game_over"] = pygame.mixer.Sound(game_over_path)
+
+        except Exception:
+            # If mixer or audio system fails, use DummySound fallbacks
+            pass
 
     def reset_game(self, difficulty="Medium"):
         self.current_difficulty = difficulty
@@ -48,6 +88,12 @@ class GameEngine:
 
         self.score = 0
         self.game_over = False
+
+    def trigger_game_over(self):
+        if not self.game_over:
+            self.game_over = True
+            self.state = "GAME_OVER"
+            self.sounds["game_over"].play()
 
     def handle_event(self, event):
         if event.type != pygame.KEYDOWN:
@@ -74,6 +120,7 @@ class GameEngine:
                 bullet_x = self.player.center_x() - 2
                 self.player_bullets.append(Bullet(bullet_x, self.player.y, direction=-1))
                 self._shoot_cooldown = 15
+                self.sounds["shoot"].play()
 
     def handle_input(self):
         if self.state != "PLAYING":
@@ -116,6 +163,7 @@ class GameEngine:
                     enemy.alive = False
                     bullets_to_remove.add(bullet)
                     self.score += 1
+                    self.sounds["destroy"].play()
                     break
 
         if bullets_to_remove:
@@ -123,13 +171,11 @@ class GameEngine:
 
         for bullet in self.enemy_bullets:
             if bullet.rect().colliderect(self.player.rect()):
-                self.game_over = True
-                self.state = "GAME_OVER"
+                self.trigger_game_over()
                 break
 
         if self.enemy_grid.reached_bottom(self.player.y):
-            self.game_over = True
-            self.state = "GAME_OVER"
+            self.trigger_game_over()
 
     def render(self, screen):
         if self.state == "MENU":
@@ -154,7 +200,6 @@ class GameEngine:
             screen.blit(quit_txt, quit_txt.get_rect(center=(self.width // 2, 520)))
             return
 
-        # Render active gameplay
         pygame.draw.rect(screen, GREEN, self.player.rect())
 
         for enemy in self.enemy_grid.alive_enemies():
