@@ -25,9 +25,13 @@ class GameEngine:
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
+        self.large_font = pygame.font.SysFont("Arial", 60)
         self.game_over = False
 
     def handle_event(self, event):
+        if self.game_over:
+            return
+
         if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             if self._shoot_cooldown <= 0:
                 bullet_x = self.player.center_x() - 2
@@ -35,6 +39,9 @@ class GameEngine:
                 self._shoot_cooldown = 15
 
     def handle_input(self):
+        if self.game_over:
+            return
+
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.player.move(-self.player.speed, self.width)
@@ -99,6 +106,12 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
-        if self.game_over and not getattr(self, "_game_over_logged", False):
-            print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+        if self.game_over:
+            game_over_surface = self.large_font.render("GAME OVER", True, RED)
+            final_score_surface = self.font.render(f"Final Score: {self.score}", True, WHITE)
+
+            go_rect = game_over_surface.get_rect(center=(self.width // 2, self.height // 2 - 30))
+            score_rect = final_score_surface.get_rect(center=(self.width // 2, self.height // 2 + 30))
+
+            screen.blit(game_over_surface, go_rect)
+            screen.blit(final_score_surface, score_rect)
