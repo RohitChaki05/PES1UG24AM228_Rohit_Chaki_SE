@@ -1,0 +1,1 @@
+{'P101': {'name': 'John Doe', 'ward': 'ICU', 'is_admitted': False, 'bill': 2400.0}, 'P102': {'name': 'Jane Smith', 'ward': 'General', 'is_admitted': False, 'bill': 450.0}, 'P103': {'name': 'Robert Brown', 'ward': 'Private', 'is_admitted': True, 'bill': 1200.0}, 'P104': {'name': 'Alice Walker', 'ward': 'General', 'is_admitted': True, 'bill': 0.0}}
